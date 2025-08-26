@@ -53,6 +53,16 @@ class LetterDisplay extends HTMLElement {
         if (pressedKey === this.currentLetter) {
           this.correctSound.currentTime = 0;
           this.correctSound.play();
+          
+          // Create particle explosion effect
+          if (window.particleEffect) {
+            const letterElement = this.shadowRoot.querySelector('.letter');
+            if (letterElement) {
+              const rect = letterElement.getBoundingClientRect();
+              window.particleEffect.explode(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            }
+          }
+          
           // Dispatch correct key event for stats
           window.dispatchEvent(new Event('correctKey'));
           this.currentLetter = this.getRandomLetter();

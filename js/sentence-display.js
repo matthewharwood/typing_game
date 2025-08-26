@@ -159,6 +159,16 @@ class SentenceDisplay extends HTMLElement {
       if (pressedKey === currentChar) {
         this.correctSound.currentTime = 0;
         this.correctSound.play();
+        
+        // Create particle explosion effect at the active letter
+        if (window.particleEffect) {
+          const activeLetterElement = this.shadowRoot.querySelector('.letter.active');
+          if (activeLetterElement) {
+            const rect = activeLetterElement.getBoundingClientRect();
+            window.particleEffect.explode(rect.left + rect.width / 2, rect.top + rect.height / 2);
+          }
+        }
+        
         // Dispatch correct key event for stats
         window.dispatchEvent(new Event('correctKey'));
         this.currentIndex++;
