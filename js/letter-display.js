@@ -5,6 +5,9 @@ class LetterDisplay extends HTMLElement {
     this.currentLetter = this.getRandomLetter();
     this.correctSound = new Audio('img/correct.mp3');
     this.wrongSound = new Audio('img/wrong.mp3');
+    // Preload sounds
+    this.correctSound.preload = 'auto';
+    this.wrongSound.preload = 'auto';
     this.isVisible = true;
   }
 
@@ -101,13 +104,14 @@ class LetterDisplay extends HTMLElement {
           padding: var(--spacing-8, 32px) var(--spacing-12, 48px);
           background: white;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          transition: transform 0.1s linear; /* FASTER & SIMPLER */
+          transform: translateZ(0); /* GPU LAYER */
+          will-change: transform; /* OPTIMIZATION HINT */
           user-select: none;
         }
         
         .letter:hover {
-          transform: scale(1.05);
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+          transform: translateZ(0) scale(1.05); /* MAINTAIN GPU LAYER */
         }
       </style>
       <div class="letter">${this.currentLetter}</div>

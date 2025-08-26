@@ -65,7 +65,7 @@ class TypingStats extends HTMLElement {
   startTimer() {
     this.timer = setInterval(() => {
       this.updateDisplay();
-    }, 10); // Update every 10ms for smooth millisecond display
+    }, 50); // OPTIMIZED: 20fps is smooth enough, saves CPU (was 100fps)
   }
 
   stopTimer() {

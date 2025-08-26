@@ -58,9 +58,13 @@ class SentenceDisplay extends HTMLElement {
     this.loadState();
     this.correctSound = new Audio('img/correct.mp3');
     this.wrongSound = new Audio('img/wrong.mp3');
+    // Preload sounds
+    this.correctSound.preload = 'auto';
+    this.wrongSound.preload = 'auto';
     this.isVisible = false;
     this.sentenceStartTime = null;
     this.charactersTyped = 0;
+    this.saveTimeout = null; // For throttling saves
   }
 
   loadState() {
@@ -83,10 +87,15 @@ class SentenceDisplay extends HTMLElement {
   }
 
   saveState() {
-    localStorage.setItem('currentSentence', this.currentSentence);
-    localStorage.setItem('currentIndex', this.currentIndex.toString());
-    localStorage.setItem('sentenceStartTime', this.sentenceStartTime.toString());
-    localStorage.setItem('charactersTyped', this.charactersTyped.toString());
+    // THROTTLE saves to reduce I/O overhead
+    if (this.saveTimeout) clearTimeout(this.saveTimeout);
+    
+    this.saveTimeout = setTimeout(() => {
+      localStorage.setItem('currentSentence', this.currentSentence);
+      localStorage.setItem('currentIndex', this.currentIndex.toString());
+      localStorage.setItem('sentenceStartTime', this.sentenceStartTime.toString());
+      localStorage.setItem('charactersTyped', this.charactersTyped.toString());
+    }, 100); // Save after 100ms of inactivity
   }
 
   connectedCallback() {
@@ -249,8 +258,9 @@ class SentenceDisplay extends HTMLElement {
           align-items: center;
           height: 100%;
           position: absolute;
-          transition: transform 0.3s ease;
-          transform: translateX(${offsetX}px);
+          transition: transform 0.15s linear; /* FASTER & LINEAR */
+          transform: translate3d(${offsetX}px, 0, 0); /* GPU ACCELERATION */
+          will-change: transform; /* HINT TO BROWSER */
         }
         
         .letter {
@@ -264,7 +274,7 @@ class SentenceDisplay extends HTMLElement {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.3s ease;
+          transition: opacity 0.15s linear, border 0.1s linear; /* SELECTIVE & FASTER */
         }
         
         .letter.active {
@@ -272,7 +282,9 @@ class SentenceDisplay extends HTMLElement {
           border: 4px solid var(--cyan-500, oklch(71.5% 0.143 215.221));
           border-radius: 12px;
           background: white;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* LIGHTER SHADOW */
+          transform: translateZ(0); /* FORCE GPU LAYER */
+          will-change: opacity, border; /* OPTIMIZATION HINT */
         }
         
         .letter.passed {

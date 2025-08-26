@@ -122,7 +122,8 @@ class VisualKeyboard extends HTMLElement {
           border-radius: 6px;
           font-size: 14px;
           font-weight: bold;
-          transition: background 0.3s ease;
+          transition: background 0.15s linear; /* FASTER */
+          transform: translateZ(0); /* GPU LAYER */
           cursor: default;
         }
         

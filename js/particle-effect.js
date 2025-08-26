@@ -89,8 +89,8 @@ class ParticleEffect {
   explode(x, y) {
     this.init();
     
-    // Create 15-25 particles from top of the letter position
-    const particleCount = 15 + Math.floor(Math.random() * 10);
+    // REDUCED particle count for performance (8-12 instead of 15-25)
+    const particleCount = 8 + Math.floor(Math.random() * 4);
     const topY = y - 40; // Start from top of letter
     
     for (let i = 0; i < particleCount; i++) {
@@ -114,26 +114,16 @@ class ParticleEffect {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctxBg.clearRect(0, 0, this.canvasBg.width, this.canvasBg.height);
     
-    // Separate particles by layer
-    const frontParticles = [];
-    const backParticles = [];
-    
-    // Update and categorize particles
+    // OPTIMIZED: Single pass update and draw
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const particle = this.particles[i];
       
-      // Update position
+      // Update physics (simplified operations)
       particle.x += particle.vx;
       particle.y += particle.vy;
-      
-      // Apply gravity
       particle.vy += 0.3;
-      
-      // Apply friction
       particle.vx *= 0.98;
       particle.vy *= 0.98;
-      
-      // Update life
       particle.life--;
       
       // Remove dead particles
@@ -142,23 +132,10 @@ class ParticleEffect {
         continue;
       }
       
-      // Sort into layers
-      if (particle.layer === 'front') {
-        frontParticles.push(particle);
-      } else {
-        backParticles.push(particle);
-      }
+      // Draw immediately based on layer (no intermediate arrays)
+      const ctx = particle.layer === 'front' ? this.ctx : this.ctxBg;
+      this.drawParticle(ctx, particle);
     }
-    
-    // Draw back layer particles (behind letter)
-    backParticles.forEach(particle => {
-      this.drawParticle(this.ctxBg, particle);
-    });
-    
-    // Draw front layer particles (in front of letter)
-    frontParticles.forEach(particle => {
-      this.drawParticle(this.ctx, particle);
-    });
     
     
     // Continue animation if there are particles
@@ -174,26 +151,14 @@ class ParticleEffect {
     const lifeRatio = particle.life / particle.maxLife;
     const alpha = lifeRatio;
     
-    // Draw particle with glow effect
-    ctx.save();
-    
-    // Draw glow
-    ctx.globalAlpha = alpha * 0.3;
+    // OPTIMIZED: Removed shadows and reduced draw calls
+    ctx.globalAlpha = alpha * 0.8;
     ctx.fillStyle = particle.color;
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = particle.color;
-    ctx.beginPath();
-    ctx.arc(particle.x, particle.y, particle.size * 2, 0, Math.PI * 2);
-    ctx.fill();
     
-    // Draw particle core
-    ctx.globalAlpha = alpha;
-    ctx.shadowBlur = 5;
+    // Single circle instead of glow + core (massive performance gain)
     ctx.beginPath();
-    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    ctx.arc(particle.x, particle.y, particle.size * 1.5, 0, Math.PI * 2);
     ctx.fill();
-    
-    ctx.restore();
   }
 }
 
