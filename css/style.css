@@ -8,6 +8,42 @@
  */
 
 /* ==========================================================================
+   CSS Variables and Font Import
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Source+Sans+3:wght@400;900&display=swap');
+
+:root {
+  --font-typewriter: 'Courier Prime', monospace;
+  --font-sans: 'Source Sans 3', sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-bold: 700;
+  --font-weight-black: 900;
+  
+  /* Colors - Tailwind naming convention */
+  --cyan-300: oklch(91.7% 0.08 205.041);
+  --cyan-400: oklch(81% 0.11 210);
+  --cyan-500: oklch(71.5% 0.143 215.221);
+  --cyan-600: oklch(52% 0.105 223.128);
+  --cyan-800: oklch(30.2% 0.056 229.695);
+  
+  /* Sizing - Tailwind naming convention */
+  --text-4xl: 36px;
+  --text-5xl: 48px;
+  --text-6xl: 60px;
+  --text-3xl: 30px;
+  --text-2xl: 24px;
+  --text-xl: 20px;
+  --text-lg: 18px;
+  --text-base: 16px;
+  
+  /* Spacing */
+  --spacing-4: 16px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+}
+
+/* ==========================================================================
    Base styles: opinionated defaults
    ========================================================================== */
 
@@ -15,6 +51,34 @@ html {
   color: #222;
   font-size: 1em;
   line-height: 1.4;
+  font-family: var(--font-typewriter);
+  height: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  touch-action: manipulation;
+}
+
+body {
+  background: var(--cyan-300);
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+* {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 /*
