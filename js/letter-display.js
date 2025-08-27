@@ -8,6 +8,7 @@ class LetterDisplay extends HTMLElement {
     this.sessionStartTime = Date.now();
     this.correctCount = 0;
     this.wrongCount = 0;
+    this.isComplete = false;
   }
 
   loadLetterStats() {
@@ -39,22 +40,23 @@ class LetterDisplay extends HTMLElement {
     const availableLetters = [];
     const weights = [];
     
-    // Check if all letters have been practiced 2 times
+    // Check if all letters have been practiced once
     let allComplete = true;
     for (const letter of letters) {
-      if (this.letterPracticeCount[letter] < 2) {
+      if (this.letterPracticeCount[letter] < 1) {
         allComplete = false;
-        // Weight: higher for unpracticed letters
-        const weight = Math.max(1, 3 - this.letterPracticeCount[letter]);
+        // Weight: higher for unpracticed letters  
+        const weight = Math.max(1, 2 - this.letterPracticeCount[letter]);
         availableLetters.push(letter);
         weights.push(weight);
       }
     }
     
     // If all letters are complete, show score and reset
-    if (allComplete) {
+    if (allComplete && !this.isComplete) {
+      this.isComplete = true;
       this.showSingleLetterScore();
-      return 'A'; // Default while waiting
+      return this.currentLetter || 'A'; // Keep current letter while showing score
     }
     
     // Weighted random selection
@@ -98,6 +100,7 @@ class LetterDisplay extends HTMLElement {
     this.sessionStartTime = Date.now();
     this.correctCount = 0;
     this.wrongCount = 0;
+    this.isComplete = false;
     this.currentLetter = this.getWeightedRandomLetter();
     this.render();
   }
@@ -142,8 +145,8 @@ class LetterDisplay extends HTMLElement {
 
   setupKeyboardListener() {
     this.keyHandler = (e) => {
-      // Only process keys if visible (in single letter mode)
-      if (!this.isVisible) return;
+      // Only process keys if visible (in single letter mode) and not complete
+      if (!this.isVisible || this.isComplete) return;
       
       const pressedKey = e.key.toUpperCase();
       if (pressedKey.length === 1 && /[A-Z]/.test(pressedKey)) {

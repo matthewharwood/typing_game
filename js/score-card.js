@@ -4,6 +4,10 @@ class ScoreCard extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this.countdown = 5;
     this.timer = null;
+    this.fireCanvas = null;
+    this.fireCtx = null;
+    this.fireAnimation = null;
+    this.particles = [];
   }
 
   connectedCallback() {
@@ -32,6 +36,7 @@ class ScoreCard extends HTMLElement {
     
     this.render();
     this.startCountdown();
+    this.initFireEffect();
   }
 
   hide() {
@@ -46,6 +51,11 @@ class ScoreCard extends HTMLElement {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
+    }
+    
+    if (this.fireAnimation) {
+      cancelAnimationFrame(this.fireAnimation);
+      this.fireAnimation = null;
     }
   }
 
@@ -85,7 +95,172 @@ class ScoreCard extends HTMLElement {
     return `${secs}.${ms.toString().padStart(2, '0')}s`;
   }
 
+  getFireColors() {
+    const speed = Math.round(this.wpm || 0);
+    
+    // Determine fire level based on WPM/LPM
+    if (this.mode === 'single') {
+      // For single letter mode (letters per minute)
+      if (speed >= 40) {
+        // Blue fire - excellent!
+        return {
+          colors: [
+            'oklch(96.7% 0.064 214.3)',  // blue-100
+            'oklch(86.8% 0.121 221.4)',  // blue-300
+            'oklch(71.5% 0.143 215.2)',  // blue-500
+            'oklch(50.8% 0.237 241.2)'   // blue-700
+          ],
+          intensity: 1.2
+        };
+      } else if (speed >= 25) {
+        // Red fire - great!
+        return {
+          colors: [
+            'oklch(95.7% 0.039 15.8)',   // red-100
+            'oklch(86.4% 0.114 18.7)',   // red-300
+            'oklch(64.5% 0.246 16.4)',   // red-500
+            'oklch(50.0% 0.199 21.7)'    // red-700
+          ],
+          intensity: 1.0
+        };
+      } else if (speed >= 15) {
+        // Orange fire - good!
+        return {
+          colors: [
+            'oklch(97.2% 0.037 75.8)',   // orange-100
+            'oklch(90.8% 0.096 62.3)',   // orange-300
+            'oklch(75.0% 0.183 47.5)',   // orange-500
+            'oklch(57.4% 0.184 44.6)'    // orange-700
+          ],
+          intensity: 0.8
+        };
+      }
+    } else {
+      // For sentence mode (words per minute)
+      if (speed >= 20) {
+        // Blue fire
+        return {
+          colors: [
+            'oklch(96.7% 0.064 214.3)',
+            'oklch(86.8% 0.121 221.4)',
+            'oklch(71.5% 0.143 215.2)',
+            'oklch(50.8% 0.237 241.2)'
+          ],
+          intensity: 1.2
+        };
+      } else if (speed >= 12) {
+        // Red fire
+        return {
+          colors: [
+            'oklch(95.7% 0.039 15.8)',
+            'oklch(86.4% 0.114 18.7)',
+            'oklch(64.5% 0.246 16.4)',
+            'oklch(50.0% 0.199 21.7)'
+          ],
+          intensity: 1.0
+        };
+      } else if (speed >= 7) {
+        // Orange fire
+        return {
+          colors: [
+            'oklch(97.2% 0.037 75.8)',
+            'oklch(90.8% 0.096 62.3)',
+            'oklch(75.0% 0.183 47.5)',
+            'oklch(57.4% 0.184 44.6)'
+          ],
+          intensity: 0.8
+        };
+      }
+    }
+    
+    // No fire for low scores
+    return null;
+  }
+
+  initFireEffect() {
+    const fireConfig = this.getFireColors();
+    if (!fireConfig) return;
+    
+    this.fireCanvas = this.shadowRoot.querySelector('.fire-canvas');
+    if (!this.fireCanvas) return;
+    
+    this.fireCtx = this.fireCanvas.getContext('2d');
+    const rect = this.fireCanvas.getBoundingClientRect();
+    this.fireCanvas.width = rect.width;
+    this.fireCanvas.height = rect.height;
+    
+    // Initialize particles with staggered creation
+    this.particles = [];
+    for (let i = 0; i < 40; i++) {
+      const particle = this.createParticle(fireConfig);
+      // Stagger initial positions for fuller flame
+      particle.y -= Math.random() * 30;
+      particle.life = Math.random() * 0.5 + 0.5;
+      this.particles.push(particle);
+    }
+    
+    this.animateFire(fireConfig);
+  }
+
+  createParticle(fireConfig) {
+    const centerX = this.fireCanvas.width / 2;
+    const spread = 30; // How wide the base of the flame is
+    return {
+      x: centerX + (Math.random() - 0.5) * spread,
+      y: this.fireCanvas.height - 20, // Start from bottom of number
+      vx: (Math.random() - 0.5) * 1.5,
+      vy: -Math.random() * 4 - 3, // Upward velocity
+      size: Math.random() * 12 + 8,
+      life: 1.0,
+      decay: Math.random() * 0.015 + 0.01,
+      color: fireConfig.colors[Math.floor(Math.random() * fireConfig.colors.length)]
+    };
+  }
+
+  animateFire(fireConfig) {
+    if (!this.fireCtx || !fireConfig) return;
+    
+    this.fireCtx.globalCompositeOperation = 'screen';
+    this.fireCtx.clearRect(0, 0, this.fireCanvas.width, this.fireCanvas.height);
+    
+    // Update and draw particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      
+      // Update particle
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= p.decay;
+      p.vy -= 0.08; // Slight upward acceleration
+      p.vx *= 0.98; // Slow horizontal movement
+      p.size *= 0.97; // Shrink
+      
+      // Remove dead particles
+      if (p.life <= 0 || p.size < 1) {
+        this.particles.splice(i, 1);
+        this.particles.push(this.createParticle(fireConfig));
+        continue;
+      }
+      
+      // Draw particle
+      const gradient = this.fireCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+      gradient.addColorStop(0, p.color);
+      gradient.addColorStop(0.5, p.color.replace(/[\d.]+\)$/, `${p.life * 0.5})`));
+      gradient.addColorStop(1, 'transparent');
+      
+      this.fireCtx.fillStyle = gradient;
+      this.fireCtx.beginPath();
+      this.fireCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      this.fireCtx.fill();
+    }
+    
+    this.fireAnimation = requestAnimationFrame(() => this.animateFire(fireConfig));
+  }
+
   render() {
+    const fireConfig = this.getFireColors();
+    const hasFireEffect = fireConfig !== null;
+    
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -153,6 +328,21 @@ class ScoreCard extends HTMLElement {
           margin-bottom: 8px;
         }
         
+        .stat.with-fire {
+          position: relative;
+        }
+        
+        .fire-canvas {
+          position: absolute;
+          width: 150px;
+          height: 120px;
+          top: -30px;
+          left: 50%;
+          transform: translateX(-50%);
+          pointer-events: none;
+          z-index: -1;
+        }
+        
         .stat-label {
           font-size: 14px;
           font-weight: var(--font-weight-bold, 700);
@@ -204,7 +394,8 @@ class ScoreCard extends HTMLElement {
             <div class="stat-value">${this.formatTime(this.timeInSeconds || 0)}</div>
             <div class="stat-label">Time</div>
           </div>
-          <div class="stat">
+          <div class="stat ${hasFireEffect ? 'with-fire' : ''}">
+            ${hasFireEffect ? '<canvas class="fire-canvas"></canvas>' : ''}
             <div class="stat-value">${Math.round(this.wpm || 0)}</div>
             <div class="stat-label">${this.mode === 'single' ? 'Letters/Min' : 'Words/Min'}</div>
           </div>
