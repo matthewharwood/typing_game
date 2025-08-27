@@ -56,14 +56,10 @@ class SentenceDisplay extends HTMLElement {
     ];
     
     this.loadState();
-    this.correctSound = new Audio('img/correct.mp3');
-    this.wrongSound = new Audio('img/wrong.mp3');
-    // Preload sounds
-    this.correctSound.preload = 'auto';
-    this.wrongSound.preload = 'auto';
     this.isVisible = false;
     this.sentenceStartTime = null;
     this.charactersTyped = 0;
+    this.wrongKeystrokes = 0;
     this.saveTimeout = null; // For throttling saves
   }
 
@@ -72,17 +68,20 @@ class SentenceDisplay extends HTMLElement {
     const savedIndex = localStorage.getItem('currentIndex');
     const savedStartTime = localStorage.getItem('sentenceStartTime');
     const savedCharactersTyped = localStorage.getItem('charactersTyped');
+    const savedWrongKeystrokes = localStorage.getItem('wrongKeystrokes');
     
     if (savedSentence) {
       this.currentSentence = savedSentence;
       this.currentIndex = parseInt(savedIndex) || 0;
       this.sentenceStartTime = savedStartTime ? parseInt(savedStartTime) : Date.now();
       this.charactersTyped = parseInt(savedCharactersTyped) || this.currentIndex;
+      this.wrongKeystrokes = parseInt(savedWrongKeystrokes) || 0;
     } else {
       this.currentSentence = "";
       this.currentIndex = 0;
       this.sentenceStartTime = Date.now();
       this.charactersTyped = 0;
+      this.wrongKeystrokes = 0;
     }
   }
 
@@ -95,6 +94,7 @@ class SentenceDisplay extends HTMLElement {
       localStorage.setItem('currentIndex', this.currentIndex.toString());
       localStorage.setItem('sentenceStartTime', this.sentenceStartTime.toString());
       localStorage.setItem('charactersTyped', this.charactersTyped.toString());
+      localStorage.setItem('wrongKeystrokes', this.wrongKeystrokes.toString());
     }, 100); // Save after 100ms of inactivity
   }
 
@@ -152,6 +152,7 @@ class SentenceDisplay extends HTMLElement {
     this.currentIndex = 0;
     this.sentenceStartTime = Date.now();
     this.charactersTyped = 0;
+    this.wrongKeystrokes = 0;
     this.saveState();
     this.render();
   }
@@ -166,8 +167,10 @@ class SentenceDisplay extends HTMLElement {
       
       // Check if the pressed key matches the current character
       if (pressedKey === currentChar) {
-        this.correctSound.currentTime = 0;
-        this.correctSound.play();
+        // Play sound with zero latency
+        if (window.audioManager) {
+          window.audioManager.play('correct');
+        }
         
         // Create particle explosion effect at the active letter
         if (window.particleEffect) {
@@ -190,16 +193,24 @@ class SentenceDisplay extends HTMLElement {
           const words = this.charactersTyped / 5; // 5 chars = 1 word
           const wpm = (words / timeElapsed) * 60;
           
-          // Show score card
+          // Show score card with mistakes count
           window.dispatchEvent(new CustomEvent('sentenceComplete', {
-            detail: { time: timeElapsed, wpm: wpm }
+            detail: { time: timeElapsed, wpm: wpm, mistakes: this.wrongKeystrokes }
           }));
         } else {
           this.render();
         }
       } else if (pressedKey.length === 1) {
-        this.wrongSound.currentTime = 0;
-        this.wrongSound.play();
+        // Track wrong keystroke
+        this.wrongKeystrokes++;
+        this.saveState();
+        
+        // Play wrong sound with zero latency
+        if (window.audioManager) {
+          window.audioManager.play('wrong');
+        }
+        // Trigger red vignette pulse
+        window.dispatchEvent(new Event('wrongKey'));
       }
     };
     window.addEventListener('keydown', this.keyHandler);
@@ -210,10 +221,12 @@ class SentenceDisplay extends HTMLElement {
       localStorage.removeItem('currentIndex');
       localStorage.removeItem('sentenceStartTime');
       localStorage.removeItem('charactersTyped');
+      localStorage.removeItem('wrongKeystrokes');
       this.currentSentence = "";
       this.currentIndex = 0;
       this.sentenceStartTime = Date.now();
       this.charactersTyped = 0;
+      this.wrongKeystrokes = 0;
       if (this.isVisible) {
         this.reset();
       }

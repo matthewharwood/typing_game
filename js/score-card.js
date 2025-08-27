@@ -11,10 +11,12 @@ class ScoreCard extends HTMLElement {
     this.hide();
   }
 
-  show(timeInSeconds, wpm) {
+  show(timeInSeconds, wpm, mistakes = 0, mode = 'sentence') {
     this.timeInSeconds = timeInSeconds;
     this.wpm = wpm;
-    this.countdown = 5;
+    this.mistakes = mistakes;
+    this.mode = mode;
+    this.countdown = mode === 'single' ? 10 : 5;
     this.style.display = 'flex';
     
     // Add blur to all elements except score card
@@ -49,8 +51,13 @@ class ScoreCard extends HTMLElement {
       
       if (this.countdown <= 0) {
         this.hide();
-        // Dispatch event to load next sentence
-        window.dispatchEvent(new Event('nextSentence'));
+        if (this.mode === 'single') {
+          // Clear single letter stats and restart
+          window.dispatchEvent(new Event('resetSingleLetter'));
+        } else {
+          // Dispatch event to load next sentence
+          window.dispatchEvent(new Event('nextSentence'));
+        }
       }
     }, 1000);
   }
@@ -91,12 +98,13 @@ class ScoreCard extends HTMLElement {
         .card {
           background: white;
           border-radius: 24px;
-          padding: 48px 64px;
+          padding: 48px 80px;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
           text-align: center;
           font-family: var(--font-sans, 'Source Sans 3', sans-serif);
           animation: slideUp 0.4s ease-out;
           position: relative;
+          min-width: 500px;
         }
         
         @keyframes slideUp {
@@ -193,7 +201,11 @@ class ScoreCard extends HTMLElement {
           </div>
           <div class="stat">
             <div class="stat-value">${Math.round(this.wpm || 0)}</div>
-            <div class="stat-label">Words/Min</div>
+            <div class="stat-label">${this.mode === 'single' ? 'Letters/Min' : 'Words/Min'}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" style="color: var(--rose-500, oklch(64.5% 0.246 16.439));">${this.mistakes || 0}</div>
+            <div class="stat-label">Mistakes</div>
           </div>
         </div>
         <div class="countdown-container">

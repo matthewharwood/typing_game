@@ -2,24 +2,118 @@ class LetterDisplay extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.currentLetter = this.getRandomLetter();
-    this.correctSound = new Audio('img/correct.mp3');
-    this.wrongSound = new Audio('img/wrong.mp3');
-    // Preload sounds
-    this.correctSound.preload = 'auto';
-    this.wrongSound.preload = 'auto';
+    this.loadLetterStats();
+    this.currentLetter = this.getWeightedRandomLetter();
     this.isVisible = true;
+    this.sessionStartTime = Date.now();
+    this.correctCount = 0;
+    this.wrongCount = 0;
   }
 
-  getRandomLetter() {
+  loadLetterStats() {
+    const saved = localStorage.getItem('letterPracticeCount');
+    this.letterPracticeCount = saved ? JSON.parse(saved) : {};
+    
+    const savedWrong = localStorage.getItem('letterWrongCount');
+    this.letterWrongCount = savedWrong ? JSON.parse(savedWrong) : {};
+    
+    // Initialize all letters with 0 count if not present
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    return letters[Math.floor(Math.random() * letters.length)];
+    for (const letter of letters) {
+      if (!this.letterPracticeCount[letter]) {
+        this.letterPracticeCount[letter] = 0;
+      }
+      if (!this.letterWrongCount[letter]) {
+        this.letterWrongCount[letter] = 0;
+      }
+    }
+  }
+
+  saveLetterStats() {
+    localStorage.setItem('letterPracticeCount', JSON.stringify(this.letterPracticeCount));
+    localStorage.setItem('letterWrongCount', JSON.stringify(this.letterWrongCount));
+  }
+
+  getWeightedRandomLetter() {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const availableLetters = [];
+    const weights = [];
+    
+    // Check if all letters have been practiced 5 times
+    let allComplete = true;
+    for (const letter of letters) {
+      if (this.letterPracticeCount[letter] < 5) {
+        allComplete = false;
+        // Weight: higher for unpracticed letters
+        const weight = Math.max(1, 6 - this.letterPracticeCount[letter]);
+        availableLetters.push(letter);
+        weights.push(weight);
+      }
+    }
+    
+    // If all letters are complete, show score and reset
+    if (allComplete) {
+      this.showSingleLetterScore();
+      return 'A'; // Default while waiting
+    }
+    
+    // Weighted random selection
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    let random = Math.random() * totalWeight;
+    
+    for (let i = 0; i < availableLetters.length; i++) {
+      random -= weights[i];
+      if (random <= 0) {
+        return availableLetters[i];
+      }
+    }
+    
+    return availableLetters[0];
+  }
+
+  showSingleLetterScore() {
+    const timeElapsed = (Date.now() - this.sessionStartTime) / 1000;
+    const lettersPerMinute = (this.correctCount / timeElapsed) * 60;
+    
+    // Dispatch event to show score card
+    window.dispatchEvent(new CustomEvent('singleLetterComplete', {
+      detail: { 
+        time: timeElapsed, 
+        lpm: lettersPerMinute,
+        mistakes: this.wrongCount,
+        mode: 'single'
+      }
+    }));
+  }
+
+  resetSingleLetterStats() {
+    this.letterPracticeCount = {};
+    this.letterWrongCount = {};
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (const letter of letters) {
+      this.letterPracticeCount[letter] = 0;
+      this.letterWrongCount[letter] = 0;
+    }
+    this.saveLetterStats();
+    this.sessionStartTime = Date.now();
+    this.correctCount = 0;
+    this.wrongCount = 0;
+    this.currentLetter = this.getWeightedRandomLetter();
+    this.render();
   }
 
   connectedCallback() {
     this.render();
     this.setupKeyboardListener();
     this.setupModeListener();
+    
+    // Listen for reset from score card
+    window.addEventListener('resetSingleLetter', () => {
+      this.resetSingleLetterStats();
+      // Also clear visual keyboard
+      localStorage.removeItem('pressedKeys');
+      window.dispatchEvent(new Event('resetProgress'));
+    });
   }
 
   disconnectedCallback() {
@@ -54,8 +148,15 @@ class LetterDisplay extends HTMLElement {
       const pressedKey = e.key.toUpperCase();
       if (pressedKey.length === 1 && /[A-Z]/.test(pressedKey)) {
         if (pressedKey === this.currentLetter) {
-          this.correctSound.currentTime = 0;
-          this.correctSound.play();
+          // Track correct letter
+          this.letterPracticeCount[this.currentLetter]++;
+          this.correctCount++;
+          this.saveLetterStats();
+          
+          // Play sound with zero latency
+          if (window.audioManager) {
+            window.audioManager.play('correct');
+          }
           
           // Create particle explosion effect
           if (window.particleEffect) {
@@ -68,11 +169,20 @@ class LetterDisplay extends HTMLElement {
           
           // Dispatch correct key event for stats
           window.dispatchEvent(new Event('correctKey'));
-          this.currentLetter = this.getRandomLetter();
+          this.currentLetter = this.getWeightedRandomLetter();
           this.render();
         } else {
-          this.wrongSound.currentTime = 0;
-          this.wrongSound.play();
+          // Track wrong attempt
+          this.letterWrongCount[this.currentLetter]++;
+          this.wrongCount++;
+          this.saveLetterStats();
+          
+          // Play wrong sound with zero latency
+          if (window.audioManager) {
+            window.audioManager.play('wrong');
+          }
+          // Trigger red vignette pulse
+          window.dispatchEvent(new Event('wrongKey'));
         }
       }
     };

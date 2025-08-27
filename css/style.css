@@ -26,6 +26,7 @@
   --cyan-500: oklch(71.5% 0.143 215.221);
   --cyan-600: oklch(52% 0.105 223.128);
   --cyan-800: oklch(30.2% 0.056 229.695);
+  --rose-500: oklch(64.5% 0.246 16.439);
   
   /* Sizing - Tailwind naming convention */
   --text-4xl: 36px;
