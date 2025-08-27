@@ -13,10 +13,11 @@ class AudioManager {
       // Create Web Audio API context for zero-latency playback
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
       
-      // Load both sound files
+      // Load all sound files
       await Promise.all([
         this.loadSound('correct', 'img/correct.mp3'),
-        this.loadSound('wrong', 'img/wrong.mp3')
+        this.loadSound('wrong', 'img/wrong.mp3'),
+        this.loadSound('win', 'img/win.mp3')
       ]);
       
       this.initialized = true;
@@ -70,7 +71,8 @@ class AudioManager {
   useFallback() {
     this.audioPool = {
       correct: this.createAudioPool('img/correct.mp3', 3),
-      wrong: this.createAudioPool('img/wrong.mp3', 3)
+      wrong: this.createAudioPool('img/wrong.mp3', 3),
+      win: this.createAudioPool('img/win.mp3', 2)
     };
     this.initialized = true;
   }

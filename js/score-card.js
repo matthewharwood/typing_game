@@ -19,6 +19,11 @@ class ScoreCard extends HTMLElement {
     this.countdown = mode === 'single' ? 10 : 5;
     this.style.display = 'flex';
     
+    // Play win sound
+    if (window.audioManager) {
+      window.audioManager.play('win');
+    }
+    
     // Add blur to all elements except score card
     const elements = document.querySelectorAll('body > *:not(score-card)');
     elements.forEach(el => {

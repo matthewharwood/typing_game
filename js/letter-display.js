@@ -39,13 +39,13 @@ class LetterDisplay extends HTMLElement {
     const availableLetters = [];
     const weights = [];
     
-    // Check if all letters have been practiced 5 times
+    // Check if all letters have been practiced 2 times
     let allComplete = true;
     for (const letter of letters) {
-      if (this.letterPracticeCount[letter] < 5) {
+      if (this.letterPracticeCount[letter] < 2) {
         allComplete = false;
         // Weight: higher for unpracticed letters
-        const weight = Math.max(1, 6 - this.letterPracticeCount[letter]);
+        const weight = Math.max(1, 3 - this.letterPracticeCount[letter]);
         availableLetters.push(letter);
         weights.push(weight);
       }
